@@ -12,7 +12,7 @@ import {
 import api from '../api/api';
 
 interface Vehicle {
-  id: string;
+  _id: string;
   model: string;
   plate: string;
   year: number;
@@ -28,6 +28,7 @@ interface VehicleFormModalProps {
 
 const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSave, vehicleToEdit }) => {
   const [vehicle, setVehicle] = useState({
+    
     model: '',
     plate: '',
     year: '',
@@ -57,7 +58,6 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
         resetForm();
       }
     } else {
-      // Não é necessário limpar quando está fechando, handleClose já faz isso.
     }
   }, [open, vehicleToEdit]);
 
@@ -110,7 +110,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     }
 
     const vehicleData = {
-      vehicleModel: vehicle.model.trim(),
+      model: vehicle.model.trim(),
       plate: vehicle.plate.trim(),
       year: parseInt(vehicle.year, 10),
       capacity: parseInt(vehicle.capacity, 10),
@@ -119,11 +119,9 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     setLoading(true);
     try {
       if (isEditing) {
-        // Modo Edição: requisição PUT
-        const response = await api.put(`/api/vehicles/${vehicleToEdit!.id}`, vehicleData);
+        const response = await api.put(`/api/vehicles/${vehicleToEdit!._id}`, vehicleData);
         onSave(response.data);
       } else {
-        // Modo Adição: requisição POST
         const response = await api.post('/api/vehicles', vehicleData);
         onSave(response.data);
       }

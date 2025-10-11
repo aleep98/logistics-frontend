@@ -24,12 +24,10 @@ const LoginPage: React.FC = () => {
       const response = await api.post('/api/auth/login', { email, password });
       const { token, user } = response.data;
 
-      // Armazena o token e os dados do usuário
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
       console.log('Login bem-sucedido!', user);
 
-      // Redireciona o usuário para o dashboard
       navigate('/dashboard');
 
     } catch (err: any) {

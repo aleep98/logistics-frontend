@@ -9,7 +9,6 @@ const DashboardPage: React.FC = () => {
     const userDataString = localStorage.getItem('user');
     if (userDataString) {
       const userData = JSON.parse(userDataString);
-      // Assumindo que o objeto do usuário tem uma propriedade 'name'
       setUserName(userData.name || 'Usuário');
     }
   }, []);

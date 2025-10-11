@@ -24,16 +24,14 @@ import ConfirmationDialog from '../components/ConfirmationDialog';
 import VehicleFormModal from '../components/VehicleFormModal';
 import api from '../api/api';
 
-// 1. Interface para o tipo de dado do veículo
 interface Vehicle {
-  id: string;
+  _id: string;
   model: string;
   plate: string;
   year: number;
   capacity: number;
 }
 
-// Tipo para a direção da ordenação
 type Order = 'asc' | 'desc';
 
 const VehiclesPage: React.FC = () => {
@@ -44,7 +42,6 @@ const VehiclesPage: React.FC = () => {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
-  // Estados para paginação e ordenação
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [totalVehicles, setTotalVehicles] = useState(0);
@@ -54,18 +51,16 @@ const VehiclesPage: React.FC = () => {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      // A rota da API agora aceita parâmetros de paginação e ordenação
       const response = await api.get('/api/vehicles', {
         params: {
-          page: page + 1, // A API pode esperar a página baseada em 1
+          page: page + 1,
           limit: rowsPerPage,
           sort: orderBy,
           order: order,
         },
       });
-      // Assumindo que a API retorna um objeto com 'data' e 'total'
-      setVehicles(response.data?.data || []); // Garante que 'vehicles' seja sempre um array
-      setTotalVehicles(response.data?.total || 0); // Garante que 'totalVehicles' seja sempre um número
+      setVehicles(response.data?.data || []); 
+      setTotalVehicles(response.data?.total || 0); 
     } catch (err: any) {
       setError('Falha ao buscar os veículos. Tente novamente mais tarde.');
       console.error(err);
@@ -76,7 +71,7 @@ const VehiclesPage: React.FC = () => {
 
   useEffect(() => {
     fetchVehicles();
-  }, [page, rowsPerPage, order, orderBy]); // Re-executa a busca quando a paginação ou ordenação mudar
+  }, [page, rowsPerPage, order, orderBy]); 
 
   const handleOpenAddModal = () => {
     setEditingVehicle(null);
@@ -89,12 +84,9 @@ const VehiclesPage: React.FC = () => {
   };
 
   const handleSaveVehicle = (_savedVehicle: Vehicle) => {
-    // Se estiver editando, apenas recarrega os dados da página atual.
     if (editingVehicle) {
       fetchVehicles();
     } else {
-      // Se estiver adicionando um novo, calcula a última página e navega para ela.
-      // Isso garante que o novo item seja visível.
       const newTotal = totalVehicles + 1;
       const lastPage = Math.max(0, Math.ceil(newTotal / rowsPerPage) - 1);
       setPage(lastPage);
@@ -114,25 +106,21 @@ const VehiclesPage: React.FC = () => {
     if (!vehicleToDelete) return;
 
     try {
-      await api.delete(`/api/vehicles/${vehicleToDelete.id}`);
-      // Após deletar, verifica se a página atual ficará vazia
+      await api.delete(`/api/vehicles/${vehicleToDelete._id}`);
+
       if (vehicles.length === 1 && page > 0) {
-        // Se era o último item da página (e não é a primeira página),
-        // volta para a página anterior.
         setPage(page - 1);
       } else {
-        // Caso contrário, apenas recarrega os dados da página atual. O useEffect cuidará disso.
-        fetchVehicles(); 
+        fetchVehicles();
       }
-      closeDeleteDialog();
     } catch (err: any) {
-      // Mostra a mensagem de erro específica do backend, se disponível.
-      setError(err.response?.data?.error || 'Falha ao excluir o veículo.');
+      setError(err.response?.data?.error || "Falha ao excluir o veículo.");
       console.error(err);
     }
+
+    closeDeleteDialog();
   };
 
-  // Handlers para paginação e ordenação
   const handleRequestSort = (property: keyof Vehicle) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -163,7 +151,6 @@ const VehiclesPage: React.FC = () => {
         title="Confirmar Exclusão"
         message={vehicleToDelete ? `Tem certeza de que deseja excluir o veículo ${vehicleToDelete.model} (placa ${vehicleToDelete.plate})? Esta ação não pode ser desfeita.` : ''}
       />
-
       <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h4" gutterBottom component="div">
@@ -174,7 +161,6 @@ const VehiclesPage: React.FC = () => {
           </Button>
         </Box>
 
-        {/* 3. Renderização condicional baseada nos estados */}
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
@@ -186,7 +172,7 @@ const VehiclesPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell sortDirection={orderBy === 'model' ? order : false}>
+                  <TableCell key="model" sortDirection={orderBy === 'model' ? order : false}>
                     <TableSortLabel
                       active={orderBy === 'model'}
                       direction={orderBy === 'model' ? order : 'asc'}
@@ -195,7 +181,7 @@ const VehiclesPage: React.FC = () => {
                       Modelo
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell sortDirection={orderBy === 'plate' ? order : false}>
+                  <TableCell key="plate" sortDirection={orderBy === 'plate' ? order : false}>
                     <TableSortLabel
                       active={orderBy === 'plate'}
                       direction={orderBy === 'plate' ? order : 'asc'}
@@ -204,7 +190,7 @@ const VehiclesPage: React.FC = () => {
                       Placa
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell align="right" sortDirection={orderBy === 'year' ? order : false}>
+                  <TableCell key="year" align="right" sortDirection={orderBy === 'year' ? order : false}>
                     <TableSortLabel
                       active={orderBy === 'year'}
                       direction={orderBy === 'year' ? order : 'asc'}
@@ -213,7 +199,7 @@ const VehiclesPage: React.FC = () => {
                       Ano
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell align="right" sortDirection={orderBy === 'capacity' ? order : false}>
+                  <TableCell key="capacity" align="right" sortDirection={orderBy === 'capacity' ? order : false}>
                     <TableSortLabel
                       active={orderBy === 'capacity'}
                       direction={orderBy === 'capacity' ? order : 'asc'}
@@ -222,12 +208,12 @@ const VehiclesPage: React.FC = () => {
                       Capacidade (kg)
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell align="center">Ações</TableCell>
+                  <TableCell key="actions" align="center">Ações</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {vehicles.map((vehicle) => (
-                  <TableRow key={vehicle.id}>
+                  <TableRow key={vehicle._id}>
                     <TableCell>{vehicle.model}</TableCell>
                     <TableCell>{vehicle.plate}</TableCell>
                     <TableCell align="right">{vehicle.year}</TableCell>

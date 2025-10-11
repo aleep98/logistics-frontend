@@ -31,7 +31,6 @@ const RegisterPage: React.FC = () => {
     try {
       const response = await api.post('/api/auth/register', { name, email, password });
       setSuccess(response.data.message || 'Registration successful! You can now log in.');
-      // Redireciona para o login após 2 segundos
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to register. Please try again.';
@@ -96,7 +95,7 @@ const RegisterPage: React.FC = () => {
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
-            disabled={!!success} // Desabilita o botão após o sucesso
+            disabled={!!success} 
           >
             Register
           </Button>
