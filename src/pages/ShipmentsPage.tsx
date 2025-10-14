@@ -24,6 +24,7 @@ import Layout from '../components/Layout';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import ShipmentFormModal from '../components/ShipmentFormModal';
 import api from '../api/api';
+import { useDataSync } from './useDataSync';
 
 export interface Shipment {
   _id: string;
@@ -31,6 +32,10 @@ export interface Shipment {
   destination: string;
   weight: number;
   status: 'Pendente' | 'Em Trânsito' | 'Entregue' | 'Cancelada';
+  reference: string;
+  customerName: string;
+  deliveryAddress: string;
+  createdAt: string;
 }
 
 type Order = 'asc' | 'desc';
@@ -55,6 +60,7 @@ const ShipmentsPage: React.FC = () => {
   const [totalShipments, setTotalShipments] = useState(0);
   const [order, setOrder] = useState<Order>('desc');
   const [orderBy, setOrderBy] = useState<keyof Shipment>('origin');
+  const { syncKey } = useDataSync();
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -74,7 +80,7 @@ const ShipmentsPage: React.FC = () => {
 
   useEffect(() => {
     fetchShipments();
-  }, [page, rowsPerPage, order, orderBy]);
+  }, [page, rowsPerPage, order, orderBy, syncKey]);
 
   const handleOpenAddModal = () => {
     setEditingShipment(null);
@@ -87,7 +93,6 @@ const ShipmentsPage: React.FC = () => {
   };
 
   const handleSaveShipment = () => {
-    fetchShipments(); // Refetch to see changes
     setIsFormModalOpen(false);
   };
 

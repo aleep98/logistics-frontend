@@ -10,6 +10,7 @@ import {
   Stack,
 } from '@mui/material';
 import api from '../api/api';
+import { useDataSync } from '../pages/useDataSync';
 
 interface Vehicle {
   _id: string;
@@ -42,6 +43,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     capacity: '',
   });
   const [loading, setLoading] = useState(false);
+  const { triggerSync } = useDataSync();
 
   const isEditing = !!vehicleToEdit;
 
@@ -57,7 +59,6 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
       } else {
         resetForm();
       }
-    } else {
     }
   }, [open, vehicleToEdit]);
 
@@ -89,12 +90,12 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
       newErrors.plate = 'Placa é obrigatória.';
       isValid = false;
     }
-    if (!vehicle.year || isNaN(parseInt(vehicle.year, 10))) {
-      newErrors.year = 'Ano inválido.';
+    if (!vehicle.year || isNaN(parseInt(vehicle.year, 10)) || parseInt(vehicle.year, 10) <= 0) {
+      newErrors.year = 'Ano deve ser um número positivo.';
       isValid = false;
     }
-    if (!vehicle.capacity || isNaN(parseInt(vehicle.capacity, 10))) {
-      newErrors.capacity = 'Capacidade inválida.';
+    if (!vehicle.capacity || isNaN(parseInt(vehicle.capacity, 10)) || parseInt(vehicle.capacity, 10) <= 0) {
+      newErrors.capacity = 'Capacidade deve ser um número positivo.';
       isValid = false;
     }
 
@@ -110,7 +111,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     }
 
     const vehicleData = {
-      model: vehicle.model.trim(),
+      vehicleModel: vehicle.model.trim(),
       plate: vehicle.plate.trim(),
       year: parseInt(vehicle.year, 10),
       capacity: parseInt(vehicle.capacity, 10),
@@ -121,9 +122,11 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
       if (isEditing) {
         const response = await api.put(`/api/vehicles/${vehicleToEdit!._id}`, vehicleData);
         onSave(response.data);
+        triggerSync();
       } else {
         const response = await api.post('/api/vehicles', vehicleData);
         onSave(response.data);
+        triggerSync();
       }
       handleClose();
     } catch (err: any) {

@@ -23,6 +23,7 @@ import Layout from '../components/Layout';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import VehicleFormModal from '../components/VehicleFormModal';
 import api from '../api/api';
+import { useDataSync } from './useDataSync';
 
 interface Vehicle {
   _id: string;
@@ -47,6 +48,7 @@ const VehiclesPage: React.FC = () => {
   const [totalVehicles, setTotalVehicles] = useState(0);
   const [order, setOrder] = useState<Order>('asc');
   const [orderBy, setOrderBy] = useState<keyof Vehicle>('model');
+  const { syncKey } = useDataSync();
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -71,7 +73,7 @@ const VehiclesPage: React.FC = () => {
 
   useEffect(() => {
     fetchVehicles();
-  }, [page, rowsPerPage, order, orderBy]); 
+  }, [page, rowsPerPage, order, orderBy, syncKey]); 
 
   const handleOpenAddModal = () => {
     setEditingVehicle(null);
@@ -84,13 +86,6 @@ const VehiclesPage: React.FC = () => {
   };
 
   const handleSaveVehicle = (_savedVehicle: Vehicle) => {
-    if (editingVehicle) {
-      fetchVehicles();
-    } else {
-      const newTotal = totalVehicles + 1;
-      const lastPage = Math.max(0, Math.ceil(newTotal / rowsPerPage) - 1);
-      setPage(lastPage);
-    }
     setIsFormModalOpen(false);
   };
 

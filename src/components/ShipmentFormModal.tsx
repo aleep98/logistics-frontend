@@ -14,7 +14,19 @@ import {
   InputLabel,
 } from '@mui/material';
 import api from '../api/api';
-import type { Shipment } from '../pages/ShipmentsPage';
+import { useDataSync } from '../pages/useDataSync';
+
+interface Shipment {
+  _id: string;
+  origin: string;
+  destination: string;
+  weight: number;
+  status: 'Pendente' | 'Em Trânsito' | 'Entregue' | 'Cancelada';
+  reference: string;
+  customerName: string;
+  deliveryAddress: string;
+  createdAt: string;
+}
 
 interface ShipmentFormModalProps {
   open: boolean;
@@ -29,14 +41,21 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
     destination: '',
     weight: '',
     status: 'Pendente',
+    reference: '',
+    customerName: '',
+    deliveryAddress: '',
   });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({
     origin: '',
     destination: '',
     weight: '',
+    reference: '',
+    customerName: '',
+    deliveryAddress: '',
   });
   const [loading, setLoading] = useState(false);
+  const { triggerSync } = useDataSync();
 
   const isEditing = !!shipmentToEdit;
 
@@ -48,6 +67,9 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
           destination: shipmentToEdit.destination,
           weight: String(shipmentToEdit.weight),
           status: shipmentToEdit.status,
+          reference: shipmentToEdit.reference,
+          customerName: shipmentToEdit.customerName,
+          deliveryAddress: shipmentToEdit.deliveryAddress,
         });
       } else {
         resetForm();
@@ -56,9 +78,9 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
   }, [open, shipmentToEdit]);
 
   const resetForm = () => {
-    setShipment({ origin: '', destination: '', weight: '', status: 'Pendente' });
+    setShipment({ origin: '', destination: '', weight: '', status: 'Pendente', reference: '', customerName: '', deliveryAddress: '' });
     setError('');
-    setFieldErrors({ origin: '', destination: '', weight: '' });
+    setFieldErrors({ origin: '', destination: '', weight: '', reference: '', customerName: '', deliveryAddress: '' });
   };
 
   const handleClose = () => {
@@ -72,7 +94,7 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
   };
 
   const validateForm = () => {
-    const newErrors = { origin: '', destination: '', weight: '' };
+    const newErrors = { origin: '', destination: '', weight: '', reference: '', customerName: '', deliveryAddress: '' };
     let isValid = true;
 
     if (!shipment.origin.trim()) {
@@ -85,6 +107,18 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
     }
     if (!shipment.weight || isNaN(parseInt(shipment.weight, 10)) || parseInt(shipment.weight, 10) <= 0) {
       newErrors.weight = 'Peso deve ser um número positivo.';
+      isValid = false;
+    }
+    if (!shipment.reference.trim()) {
+      newErrors.reference = 'Referência é obrigatória.';
+      isValid = false;
+    }
+    if (!shipment.customerName.trim()) {
+      newErrors.customerName = 'Nome do cliente é obrigatório.';
+      isValid = false;
+    }
+    if (!shipment.deliveryAddress.trim()) {
+      newErrors.deliveryAddress = 'Endereço de entrega é obrigatório.';
       isValid = false;
     }
 
@@ -104,6 +138,9 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
       destination: shipment.destination.trim(),
       weight: parseInt(shipment.weight, 10),
       status: shipment.status,
+      reference: shipment.reference.trim(),
+      customerName: shipment.customerName.trim(),
+      deliveryAddress: shipment.deliveryAddress.trim(),
     };
 
     setLoading(true);
@@ -115,6 +152,7 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
         response = await api.post('/api/shipments', shipmentData);
       }
       onSave(response.data);
+      triggerSync(); 
       handleClose();
     } catch (err: any) {
       setError(err.response?.data?.error || `Falha ao ${isEditing ? 'atualizar' : 'cadastrar'} a remessa.`);
@@ -130,6 +168,9 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
+          <TextField required name="reference" label="Referência" value={shipment.reference} onChange={handleChange} fullWidth error={!!fieldErrors.reference} helperText={fieldErrors.reference || "Ex: Nota Fiscal, Cód. do Pedido, etc."} />
+          <TextField required name="customerName" label="Nome do Cliente" value={shipment.customerName} onChange={handleChange} fullWidth error={!!fieldErrors.customerName} helperText={fieldErrors.customerName} />
+          <TextField required name="deliveryAddress" label="Endereço de Entrega" value={shipment.deliveryAddress} onChange={handleChange} fullWidth error={!!fieldErrors.deliveryAddress} helperText={fieldErrors.deliveryAddress} />
           <TextField required name="origin" label="Origem" value={shipment.origin} onChange={handleChange} fullWidth error={!!fieldErrors.origin} helperText={fieldErrors.origin} />
           <TextField required name="destination" label="Destino" value={shipment.destination} onChange={handleChange} fullWidth error={!!fieldErrors.destination} helperText={fieldErrors.destination} />
           <TextField required name="weight" label="Peso (kg)" type="number" value={shipment.weight} onChange={handleChange} fullWidth error={!!fieldErrors.weight} helperText={fieldErrors.weight} />
