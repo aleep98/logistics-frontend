@@ -83,19 +83,19 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     let isValid = true;
 
     if (!vehicle.model.trim()) {
-      newErrors.model = 'Modelo é obrigatório.';
+      newErrors.model = 'Model is required.';
       isValid = false;
     }
     if (!vehicle.plate.trim()) {
-      newErrors.plate = 'Placa é obrigatória.';
+      newErrors.plate = 'Plate is required.';
       isValid = false;
     }
     if (!vehicle.year || isNaN(parseInt(vehicle.year, 10)) || parseInt(vehicle.year, 10) <= 0) {
-      newErrors.year = 'Ano deve ser um número positivo.';
+      newErrors.year = 'Year must be a positive number.';
       isValid = false;
     }
     if (!vehicle.capacity || isNaN(parseInt(vehicle.capacity, 10)) || parseInt(vehicle.capacity, 10) <= 0) {
-      newErrors.capacity = 'Capacidade deve ser um número positivo.';
+      newErrors.capacity = 'Capacity must be a positive number.';
       isValid = false;
     }
 
@@ -112,6 +112,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
 
     const vehicleData = {
       vehicleModel: vehicle.model.trim(),
+      model: vehicle.model.trim(),
       plate: vehicle.plate.trim(),
       year: parseInt(vehicle.year, 10),
       capacity: parseInt(vehicle.capacity, 10),
@@ -130,7 +131,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
       }
       handleClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || `Falha ao ${isEditing ? 'atualizar' : 'cadastrar'} o veículo.`);
+      setError(err.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} vehicle.`);
       console.error(err);
     } finally {
       setLoading(false);
@@ -139,14 +140,14 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" PaperProps={{ component: 'form', onSubmit: handleSubmit }}>
-      <DialogTitle>{isEditing ? 'Editar Veículo' : 'Adicionar Novo Veículo'}</DialogTitle>
+      <DialogTitle>{isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             required
             name="model"
-            label="Modelo"
+            label="Model"
             value={vehicle.model}
             onChange={handleChange}
             fullWidth
@@ -156,7 +157,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="plate"
-            label="Placa"
+            label="Plate"
             value={vehicle.plate}
             onChange={handleChange}
             fullWidth
@@ -166,7 +167,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="year"
-            label="Ano"
+            label="Year"
             type="number"
             value={vehicle.year}
             onChange={handleChange}
@@ -177,7 +178,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="capacity"
-            label="Capacidade (kg)"
+            label="Capacity (kg)"
             type="number"
             value={vehicle.capacity}
             onChange={handleChange}
@@ -188,8 +189,8 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
-        <Button type="submit" variant="contained" disabled={loading}>Salvar</Button>
+        <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+        <Button type="submit" variant="contained" disabled={loading}>Save</Button>
       </DialogActions>
     </Dialog>
   );

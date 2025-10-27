@@ -21,7 +21,7 @@ interface Shipment {
   origin: string;
   destination: string;
   weight: number;
-  status: 'Pendente' | 'Em Trânsito' | 'Entregue' | 'Cancelada';
+  status: 'Pendente' | 'Em Transito' | 'Entregue' | 'Cancelada';
   reference: string;
   customerName: string;
   deliveryAddress: string;
@@ -185,7 +185,7 @@ const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, on
               onChange={handleChange as any} // Cast to any to handle Select's onChange type
             >
               <MenuItem value="Pendente">Pendente</MenuItem>
-              <MenuItem value="Em Trânsito">Em Trânsito</MenuItem>
+              <MenuItem value="Em Transito">Em Transito</MenuItem>
               <MenuItem value="Entregue">Entregue</MenuItem>
               <MenuItem value="Cancelada">Cancelada</MenuItem>
             </Select>

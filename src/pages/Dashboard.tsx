@@ -30,7 +30,7 @@ interface Shipment {
   _id: string;
   origin: string;
   destination: string;
-  status: 'Pendente' | 'Em Trânsito' | 'Entregue' | 'Cancelada';
+  status: 'Pendente' | 'Em Transito' | 'Entregue' | 'Cancelada';
   createdAt: string;
   reference: string;
   customerName: string;
@@ -185,7 +185,7 @@ const DashboardPage: React.FC = () => {
                             {v.addedBy && (
                               <Box component="span" sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary', fontSize: '0.875rem' }}>
                                 <AccountCircleIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                Adicionado por: {v.addedBy.name}
+                                Adicio nado por: {v.addedBy.name}
                               </Box>
                             )}
                           </>

@@ -31,7 +31,7 @@ export interface Shipment {
   origin: string;
   destination: string;
   weight: number;
-  status: 'Pendente' | 'Em Trânsito' | 'Entregue' | 'Cancelada';
+  status: 'Pendente' | 'Em Transito' | 'Entregue' | 'Cancelada';
   reference: string;
   customerName: string;
   deliveryAddress: string;
@@ -42,7 +42,7 @@ type Order = 'asc' | 'desc';
 
 const statusColors: Record<Shipment['status'], 'default' | 'info' | 'success' | 'error'> = {
   Pendente: 'default',
-  'Em Trânsito': 'info',
+  'Em Transito': 'info',
   Entregue: 'success',
   Cancelada: 'error',
 };
@@ -60,7 +60,7 @@ const ShipmentsPage: React.FC = () => {
   const [totalShipments, setTotalShipments] = useState(0);
   const [order, setOrder] = useState<Order>('desc');
   const [orderBy, setOrderBy] = useState<keyof Shipment>('origin');
-  const { syncKey } = useDataSync();
+  const { syncKey, triggerSync } = useDataSync();
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -106,7 +106,7 @@ const ShipmentsPage: React.FC = () => {
       if (shipments.length === 1 && page > 0) {
         setPage(page - 1);
       } else {
-        fetchShipments();
+        triggerSync(); // Use o hook de sincronização para recarregar os dados
       }
     } catch (err: any) {
       setError(err.response?.data?.error || "Falha ao excluir a remessa.");
@@ -146,10 +146,10 @@ const ShipmentsPage: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  {['origin', 'destination', 'weight', 'status'].map((headCell) => (
-                    <TableCell key={headCell} align={headCell === 'weight' ? 'right' : 'left'} sortDirection={orderBy === headCell ? order : false}>
+                  {['customerName', 'origin', 'destination', 'status'].map((headCell) => (
+                    <TableCell key={headCell} align={'left'} sortDirection={orderBy === headCell ? order : false}>
                       <TableSortLabel active={orderBy === headCell} direction={orderBy === headCell ? order : 'asc'} onClick={() => handleRequestSort(headCell as keyof Shipment)}>
-                        {headCell === 'origin' ? 'Origem' : headCell === 'destination' ? 'Destino' : headCell === 'weight' ? 'Peso (kg)' : 'Status'}
+                        {headCell === 'customerName' ? 'Cliente' : headCell === 'origin' ? 'Origem' : headCell === 'destination' ? 'Destino' : 'Status'}
                       </TableSortLabel>
                     </TableCell>
                   ))}
@@ -158,10 +158,13 @@ const ShipmentsPage: React.FC = () => {
               </TableHead>
               <TableBody>
                 {shipments.map((shipment) => (
-                  <TableRow key={shipment._id}>
+                  <TableRow key={shipment._id} hover>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="bold">{shipment.customerName}</Typography>
+                      <Typography variant="caption" color="text.secondary">Ref: {shipment.reference}</Typography>
+                    </TableCell>
                     <TableCell>{shipment.origin}</TableCell>
                     <TableCell>{shipment.destination}</TableCell>
-                    <TableCell align="right">{shipment.weight}</TableCell>
                     <TableCell><Chip label={shipment.status} color={statusColors[shipment.status]} size="small" /></TableCell>
                     <TableCell align="center">
                       <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEditModal(shipment)}><EditIcon /></IconButton></Tooltip>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -7,6 +7,8 @@ import {
   Button,
   Typography,
   Alert,
+  Grid,
+  Link,
 } from '@mui/material';
 import api from '../api/api';
 
@@ -26,14 +28,14 @@ const LoginPage: React.FC = () => {
 
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
-      console.log('Login bem-sucedido!', user);
+      console.log('Login successful!', user);
 
       navigate('/dashboard');
 
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to login. Please check your credentials.';
       setError(errorMessage);
-      console.error('Erro no login:', err);
+      console.error('Login error:', err);
     }
   };
 
@@ -84,6 +86,13 @@ const LoginPage: React.FC = () => {
           >
             Sign In
           </Button>
+          <Grid container justifyContent="flex-end">
+            <Grid item>
+              <Link component={RouterLink} to="/register" variant="body2">
+                Don't have an account? Sign Up
+              </Link>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
     </Container>
