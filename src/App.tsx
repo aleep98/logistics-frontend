@@ -6,12 +6,15 @@ import DashboardPage from './pages/Dashboard';
 import ShipmentsPage from './pages/ShipmentsPage';
 import VehiclesPage from './pages/VehiclesPage';
 import ProtectedRoute from './pages/ProtectedRoute';
+import AdminRoute from './pages/AdminRoute';
+import AdminPage from './pages/AdminPage';
 
 function App() {
   return (
     <>
       <CssBaseline />
       <Routes>
+        <Route path="/admin/*" element={<AdminRoute><AdminPage /></AdminRoute>} />
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

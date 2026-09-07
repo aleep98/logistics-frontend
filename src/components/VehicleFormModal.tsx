@@ -10,6 +10,7 @@ import {
   Stack,
 } from '@mui/material';
 import api from '../api/api';
+import axios from 'axios';
 import { useDataSync } from '../pages/useDataSync';
 
 interface Vehicle {
@@ -49,6 +50,8 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
 
   useEffect(() => {
     if (open) {
+      setError('');
+      setFieldErrors({ model: '', plate: '', year: '', capacity: '' });
       if (vehicleToEdit) {
         setVehicle({
           model: vehicleToEdit.model,
@@ -83,19 +86,19 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
     let isValid = true;
 
     if (!vehicle.model.trim()) {
-      newErrors.model = 'Model is required.';
+      newErrors.model = 'Informe o modelo.';
       isValid = false;
     }
     if (!vehicle.plate.trim()) {
-      newErrors.plate = 'Plate is required.';
+      newErrors.plate = 'Informe a placa.';
       isValid = false;
     }
     if (!vehicle.year || isNaN(parseInt(vehicle.year, 10)) || parseInt(vehicle.year, 10) <= 0) {
-      newErrors.year = 'Year must be a positive number.';
+      newErrors.year = 'Informe um ano válido.';
       isValid = false;
     }
     if (!vehicle.capacity || isNaN(parseInt(vehicle.capacity, 10)) || parseInt(vehicle.capacity, 10) <= 0) {
-      newErrors.capacity = 'Capacity must be a positive number.';
+      newErrors.capacity = 'A capacidade deve ser maior que zero.';
       isValid = false;
     }
 
@@ -105,6 +108,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (loading) return;
     setError('');
     if (!validateForm()) {
       return;
@@ -130,8 +134,8 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
         triggerSync();
       }
       handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} vehicle.`);
+    } catch (err: unknown) {
+      setError(axios.isAxiosError(err) ? err.response?.data?.error || 'Não foi possível salvar o veículo.' : 'Não foi possível salvar o veículo.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -139,15 +143,15 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" PaperProps={{ component: 'form', onSubmit: handleSubmit }}>
-      <DialogTitle>{isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
+    <Dialog open={open} onClose={loading ? undefined : handleClose} fullWidth maxWidth="sm" PaperProps={{ component: 'form', onSubmit: handleSubmit }}>
+      <DialogTitle>{isEditing ? 'Editar veículo' : 'Adicionar veículo'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
             required
             name="model"
-            label="Model"
+            label="Modelo"
             value={vehicle.model}
             onChange={handleChange}
             fullWidth
@@ -157,7 +161,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="plate"
-            label="Plate"
+            label="Placa"
             value={vehicle.plate}
             onChange={handleChange}
             fullWidth
@@ -167,7 +171,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="year"
-            label="Year"
+            label="Ano"
             type="number"
             value={vehicle.year}
             onChange={handleChange}
@@ -178,7 +182,7 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
           <TextField
             required
             name="capacity"
-            label="Capacity (kg)"
+            label="Capacidade (kg)"
             type="number"
             value={vehicle.capacity}
             onChange={handleChange}
@@ -189,8 +193,8 @@ const VehicleFormModal: React.FC<VehicleFormModalProps> = ({ open, onClose, onSa
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-        <Button type="submit" variant="contained" disabled={loading}>Save</Button>
+        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
+        <Button type="submit" variant="contained" disabled={loading}>{loading ? 'Salvando…' : 'Salvar veículo'}</Button>
       </DialogActions>
     </Dialog>
   );

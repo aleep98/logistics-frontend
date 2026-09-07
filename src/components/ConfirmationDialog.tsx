@@ -14,18 +14,19 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  busy?: boolean;
 }
 
-const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ open, onClose, onConfirm, title, message }) => {
+const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ open, onClose, onConfirm, title, message, busy = false }) => {
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={busy ? undefined : onClose}>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={onConfirm} color="error" autoFocus>Confirmar</Button>
+        <Button onClick={onClose} disabled={busy} autoFocus>Cancelar</Button>
+        <Button onClick={onConfirm} color="error" variant="contained" disabled={busy}>{busy ? 'Excluindo…' : 'Excluir'}</Button>
       </DialogActions>
     </Dialog>
   );

@@ -1,203 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-  Alert,
-  Stack,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-} from '@mui/material';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import axios from 'axios';
 import api from '../api/api';
 import { useDataSync } from '../pages/useDataSync';
-
-interface Shipment {
-  _id: string;
-  origin: string;
-  destination: string;
-  weight: number;
-  status: 'Pendente' | 'Em Transito' | 'Entregue' | 'Cancelada';
-  reference: string;
-  customerName: string;
-  deliveryAddress: string;
-  createdAt: string;
-}
-
-interface ShipmentFormModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: (shipment: Shipment) => void;
-  shipmentToEdit: Shipment | null;
-}
-
-const ShipmentFormModal: React.FC<ShipmentFormModalProps> = ({ open, onClose, onSave, shipmentToEdit }) => {
-  const [shipment, setShipment] = useState({
-    origin: '',
-    destination: '',
-    weight: '',
-    status: 'Pendente',
-    reference: '',
-    customerName: '',
-    deliveryAddress: '',
-  });
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({
-    origin: '',
-    destination: '',
-    weight: '',
-    reference: '',
-    customerName: '',
-    deliveryAddress: '',
-  });
+import type { Shipment } from '../types/logistics';
+import { statusInfo, statusKey } from '../types/logistics';
+interface Props { open: boolean; onClose: () => void; onSave: (shipment: Shipment) => void; shipmentToEdit: Shipment | null }
+export default function ShipmentFormModal({ open, onClose, onSave, shipmentToEdit }: Props) {
+  const [reference, setReference] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [status, setStatus] = useState('pending');
   const [loading, setLoading] = useState(false);
-  const { triggerSync } = useDataSync();
-
-  const isEditing = !!shipmentToEdit;
-
+  const [error, setError] = useState('');
+  const triggerSync = useDataSync(state => state.triggerSync);
   useEffect(() => {
-    if (open) {
-      if (shipmentToEdit) {
-        setShipment({
-          origin: shipmentToEdit.origin,
-          destination: shipmentToEdit.destination,
-          weight: String(shipmentToEdit.weight),
-          status: shipmentToEdit.status,
-          reference: shipmentToEdit.reference,
-          customerName: shipmentToEdit.customerName,
-          deliveryAddress: shipmentToEdit.deliveryAddress,
-        });
-      } else {
-        resetForm();
-      }
-    }
+    if (!open) return;
+    setReference(shipmentToEdit?.reference || '');
+    setCustomerName(shipmentToEdit?.customerName || '');
+    setDeliveryAddress(shipmentToEdit?.deliveryAddress || '');
+    setStatus(statusKey(shipmentToEdit?.status || 'pending'));
+    setError('');
   }, [open, shipmentToEdit]);
-
-  const resetForm = () => {
-    setShipment({ origin: '', destination: '', weight: '', status: 'Pendente', reference: '', customerName: '', deliveryAddress: '' });
-    setError('');
-    setFieldErrors({ origin: '', destination: '', weight: '', reference: '', customerName: '', deliveryAddress: '' });
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
-    const { name, value } = event.target;
-    setShipment(prev => ({ ...prev, [name as string]: value }));
-  };
-
-  const validateForm = () => {
-    const newErrors = { origin: '', destination: '', weight: '', reference: '', customerName: '', deliveryAddress: '' };
-    let isValid = true;
-
-    if (!shipment.origin.trim()) {
-      newErrors.origin = 'Origem é obrigatória.';
-      isValid = false;
-    }
-    if (!shipment.destination.trim()) {
-      newErrors.destination = 'Destino é obrigatório.';
-      isValid = false;
-    }
-    if (!shipment.weight || isNaN(parseInt(shipment.weight, 10)) || parseInt(shipment.weight, 10) <= 0) {
-      newErrors.weight = 'Peso deve ser um número positivo.';
-      isValid = false;
-    }
-    if (!shipment.reference.trim()) {
-      newErrors.reference = 'Referência é obrigatória.';
-      isValid = false;
-    }
-    if (!shipment.customerName.trim()) {
-      newErrors.customerName = 'Nome do cliente é obrigatório.';
-      isValid = false;
-    }
-    if (!shipment.deliveryAddress.trim()) {
-      newErrors.deliveryAddress = 'Endereço de entrega é obrigatório.';
-      isValid = false;
-    }
-
-    setFieldErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setError('');
-    if (!validateForm()) {
-      return;
-    }
-
-    const shipmentData = {
-      origin: shipment.origin.trim(),
-      destination: shipment.destination.trim(),
-      weight: parseInt(shipment.weight, 10),
-      status: shipment.status,
-      reference: shipment.reference.trim(),
-      customerName: shipment.customerName.trim(),
-      deliveryAddress: shipment.deliveryAddress.trim(),
-    };
-
-    setLoading(true);
+    if (loading) return;
+    if (![reference, customerName, deliveryAddress].every(value => value.trim())) { setError('Preencha todos os campos obrigatórios.'); return; }
+    setLoading(true); setError('');
     try {
-      let response;
-      if (isEditing) {
-        response = await api.put(`/api/shipments/${shipmentToEdit!._id}`, shipmentData);
-      } else {
-        response = await api.post('/api/shipments', shipmentData);
-      }
-      onSave(response.data);
-      triggerSync(); 
-      handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.error || `Falha ao ${isEditing ? 'atualizar' : 'cadastrar'} a remessa.`);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      const data = { reference: reference.trim(), customerName: customerName.trim(), deliveryAddress: deliveryAddress.trim(), status };
+      const response = shipmentToEdit ? await api.put(`/api/shipments/${shipmentToEdit._id}`, data) : await api.post('/api/shipments', data);
+      onSave(response.data); triggerSync(); onClose();
+    } catch (error) { setError(axios.isAxiosError(error) ? error.response?.data?.error || 'Não foi possível salvar a remessa.' : 'Não foi possível salvar a remessa.'); }
+    finally { setLoading(false); }
   };
-
-  return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" PaperProps={{ component: 'form', onSubmit: handleSubmit }}>
-      <DialogTitle>{isEditing ? 'Editar Remessa' : 'Adicionar Nova Remessa'}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
-          <TextField required name="reference" label="Referência" value={shipment.reference} onChange={handleChange} fullWidth error={!!fieldErrors.reference} helperText={fieldErrors.reference || "Ex: Nota Fiscal, Cód. do Pedido, etc."} />
-          <TextField required name="customerName" label="Nome do Cliente" value={shipment.customerName} onChange={handleChange} fullWidth error={!!fieldErrors.customerName} helperText={fieldErrors.customerName} />
-          <TextField required name="deliveryAddress" label="Endereço de Entrega" value={shipment.deliveryAddress} onChange={handleChange} fullWidth error={!!fieldErrors.deliveryAddress} helperText={fieldErrors.deliveryAddress} />
-          <TextField required name="origin" label="Origem" value={shipment.origin} onChange={handleChange} fullWidth error={!!fieldErrors.origin} helperText={fieldErrors.origin} />
-          <TextField required name="destination" label="Destino" value={shipment.destination} onChange={handleChange} fullWidth error={!!fieldErrors.destination} helperText={fieldErrors.destination} />
-          <TextField required name="weight" label="Peso (kg)" type="number" value={shipment.weight} onChange={handleChange} fullWidth error={!!fieldErrors.weight} helperText={fieldErrors.weight} />
-          <FormControl fullWidth>
-            <InputLabel id="status-select-label">Status</InputLabel>
-            <Select
-              labelId="status-select-label"
-              id="status-select"
-              name="status"
-              value={shipment.status}
-              label="Status"
-              onChange={handleChange as any} // Cast to any to handle Select's onChange type
-            >
-              <MenuItem value="Pendente">Pendente</MenuItem>
-              <MenuItem value="Em Transito">Em Transito</MenuItem>
-              <MenuItem value="Entregue">Entregue</MenuItem>
-              <MenuItem value="Cancelada">Cancelada</MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>Cancelar</Button>
-        <Button type="submit" variant="contained" disabled={loading}>Salvar</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-export default ShipmentFormModal;
+  return <Dialog open={open} onClose={loading ? undefined : onClose} fullWidth maxWidth="sm" slotProps={{ paper: { component: 'form', onSubmit: submit } }}>
+    <DialogTitle>{shipmentToEdit ? 'Editar remessa' : 'Nova remessa'}</DialogTitle>
+    <DialogContent><Stack spacing={2.5} sx={{ mt: 1 }}>
+      {error && <Alert severity="error">{error}</Alert>}
+      <TextField autoFocus required label="Referência" value={reference} disabled={!!shipmentToEdit || loading} onChange={event => setReference(event.target.value)} helperText="Número do pedido ou da nota fiscal." />
+      <TextField required label="Nome do cliente" value={customerName} disabled={loading} onChange={event => setCustomerName(event.target.value)} />
+      <TextField required label="Endereço de entrega" multiline minRows={2} value={deliveryAddress} disabled={loading} onChange={event => setDeliveryAddress(event.target.value)} />
+      {shipmentToEdit ? <TextField select label="Status" value={status} disabled={loading} onChange={event => setStatus(event.target.value)}>{Object.entries(statusInfo).map(([value, info]) => <MenuItem key={value} value={value}>{info.label}</MenuItem>)}</TextField> : <Alert severity="info">A remessa será criada com o status Pendente.</Alert>}
+    </Stack></DialogContent>
+    <DialogActions sx={{ px: 3, pb: 3 }}><Button onClick={onClose} disabled={loading}>Cancelar</Button><Button type="submit" variant="contained" disabled={loading}>{loading ? 'Salvando…' : 'Salvar remessa'}</Button></DialogActions>
+  </Dialog>;
+}

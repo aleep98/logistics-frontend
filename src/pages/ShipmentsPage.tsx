@@ -1,185 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Button,
-  IconButton,
-  Paper,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
-  Box,
-  Tooltip,
-  TablePagination,
-  TableSortLabel,
-  Chip,
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Fragment, useState } from 'react';
+import { Alert, Chip, Snackbar, Typography } from '@mui/material';
+import axios from 'axios';
 import Layout from '../components/Layout';
-import ConfirmationDialog from '../components/ConfirmationDialog';
+import ResourceList from '../components/ResourceList';
 import ShipmentFormModal from '../components/ShipmentFormModal';
-import api from '../api/api';
+import ShipmentDetails from '../components/ShipmentDetails';
+import ConfirmationDialog from '../components/ConfirmationDialog';
+import { useCollection } from './useCollection';
 import { useDataSync } from './useDataSync';
+import type { Shipment } from '../types/logistics';
+import { formatDate, statusInfo, statusKey } from '../types/logistics';
+import api from '../api/api';
+import { isAdmin } from '../auth/session';
+export type { Shipment } from '../types/logistics';
 
-export interface Shipment {
-  _id: string;
-  origin: string;
-  destination: string;
-  weight: number;
-  status: 'Pendente' | 'Em Transito' | 'Entregue' | 'Cancelada';
-  reference: string;
-  customerName: string;
-  deliveryAddress: string;
-  createdAt: string;
+export default function ShipmentsPage({ embedded = false }: { embedded?: boolean }) {
+  const Wrapper = embedded ? Fragment : Layout;
+  const collection = useCollection<Shipment>('/api/shipments');
+  const [editing, setEditing] = useState<Shipment | null>(null);
+  const [detail, setDetail] = useState<Shipment | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleting, setDeleting] = useState<Shipment | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
+  const triggerSync = useDataSync(state => state.triggerSync);
+  let canEdit = false;
+  try { canEdit = ['admin', 'dispatcher'].includes(JSON.parse(localStorage.getItem('user') || 'null')?.role); } catch { /* Deny unknown sessions. */ }
+  const remove = async () => {
+    if (!deleting || busy) return;
+    setBusy(true);
+    try { await api.delete(`/api/shipments/${deleting._id}`); setDeleting(null); setNotice({ text: 'Remessa excluída com sucesso.' }); triggerSync(); }
+    catch (error) { setNotice({ text: axios.isAxiosError(error) ? error.response?.data?.error || 'Não foi possível excluir a remessa.' : 'Não foi possível excluir a remessa.', error: true }); }
+    finally { setBusy(false); }
+  };
+  return <Wrapper>
+    <ResourceList title="Remessas" description="Acompanhe cada entrega, do cadastro à conclusão." {...collection}
+      searchText={shipment => `${shipment.reference} ${shipment.customerName} ${shipment.deliveryAddress} ${shipment.origin || ''} ${shipment.destination || ''}`}
+      onAdd={canEdit ? () => { setEditing(null); setFormOpen(true); } : undefined} addLabel="Nova remessa"
+      dateValue={shipment => shipment.createdAt}
+      filters={{ label: 'Status', options: Object.entries(statusInfo).map(([value, info]) => ({ value, label: info.label })), matches: (shipment, value) => statusKey(shipment.status) === value }}
+      sortOptions={[{ label: 'Mais recentes', compare: (a, b) => (b.createdAt || b._id).localeCompare(a.createdAt || a._id) }, { label: 'Cliente A–Z', compare: (a, b) => a.customerName.localeCompare(b.customerName) }, { label: 'Mais antigas', compare: (a, b) => (a.createdAt || a._id).localeCompare(b.createdAt || b._id) }]}
+      columns={[
+        { label: 'Remessa / cliente', render: shipment => <><Typography fontWeight={700} fontSize={14}>{shipment.reference}</Typography><Typography fontSize={12} color="text.secondary">{shipment.customerName}</Typography></> },
+        { label: 'Entrega', render: shipment => <Typography fontSize={13} sx={{ maxWidth: 300 }}>{shipment.deliveryAddress || shipment.destination || 'Não informado'}</Typography> },
+        { label: 'Status', render: shipment => <Chip size="small" label={statusInfo[statusKey(shipment.status)]?.label || shipment.status} color={statusInfo[statusKey(shipment.status)]?.color || 'default'} variant="outlined" /> },
+        { label: 'Criação', render: shipment => formatDate(shipment.createdAt) },
+      ]}
+      actions={[{ label: 'Ver detalhes', run: shipment => setDetail(shipment) }, ...(canEdit ? [{ label: 'Editar remessa', run: (shipment: Shipment) => { setEditing(shipment); setFormOpen(true); } }] : []), ...(isAdmin() ? [{ label: 'Excluir remessa', run: (shipment: Shipment) => setDeleting(shipment), danger: true }] : [])]} />
+    <ShipmentFormModal open={formOpen} shipmentToEdit={editing} onClose={() => setFormOpen(false)} onSave={() => { setFormOpen(false); setNotice({ text: editing ? 'Remessa atualizada com sucesso.' : 'Remessa cadastrada com sucesso.' }); }} />
+    <ShipmentDetails shipment={detail} onClose={() => setDetail(null)} />
+    <ConfirmationDialog open={!!deleting} onClose={() => { if (!busy) setDeleting(null); }} onConfirm={remove} busy={busy} title="Excluir remessa?" message={`A remessa ${deleting?.reference || ''} será excluída permanentemente. Esta ação não pode ser desfeita.`} />
+    <Snackbar open={!!notice} autoHideDuration={6000} onClose={() => setNotice(null)}><Alert severity={notice?.error ? 'error' : 'success'} onClose={() => setNotice(null)}>{notice?.text}</Alert></Snackbar>
+  </Wrapper>;
 }
-
-type Order = 'asc' | 'desc';
-
-const statusColors: Record<Shipment['status'], 'default' | 'info' | 'success' | 'error'> = {
-  Pendente: 'default',
-  'Em Transito': 'info',
-  Entregue: 'success',
-  Cancelada: 'error',
-};
-
-const ShipmentsPage: React.FC = () => {
-  const [shipments, setShipments] = useState<Shipment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [shipmentToDelete, setShipmentToDelete] = useState<Shipment | null>(null);
-  const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [totalShipments, setTotalShipments] = useState(0);
-  const [order, setOrder] = useState<Order>('desc');
-  const [orderBy, setOrderBy] = useState<keyof Shipment>('origin');
-  const { syncKey, triggerSync } = useDataSync();
-
-  const fetchShipments = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/shipments', {
-        params: { page: page + 1, limit: rowsPerPage, sort: orderBy, order },
-      });
-      setShipments(response.data?.data || []);
-      setTotalShipments(response.data?.total || 0);
-    } catch (err: any) {
-      setError('Falha ao buscar as remessas. Tente novamente mais tarde.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchShipments();
-  }, [page, rowsPerPage, order, orderBy, syncKey]);
-
-  const handleOpenAddModal = () => {
-    setEditingShipment(null);
-    setIsFormModalOpen(true);
-  };
-
-  const handleOpenEditModal = (shipment: Shipment) => {
-    setEditingShipment(shipment);
-    setIsFormModalOpen(true);
-  };
-
-  const handleSaveShipment = () => {
-    setIsFormModalOpen(false);
-  };
-
-  const openDeleteDialog = (shipment: Shipment) => setShipmentToDelete(shipment);
-  const closeDeleteDialog = () => setShipmentToDelete(null);
-
-  const handleDelete = async () => {
-    if (!shipmentToDelete) return;
-    try {
-      await api.delete(`/api/shipments/${shipmentToDelete._id}`);
-      if (shipments.length === 1 && page > 0) {
-        setPage(page - 1);
-      } else {
-        triggerSync(); // Use o hook de sincronização para recarregar os dados
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Falha ao excluir a remessa.");
-    }
-    closeDeleteDialog();
-  };
-
-  const handleRequestSort = (property: keyof Shipment) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
-  const handleChangePage = (_event: unknown, newPage: number) => setPage(newPage);
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  return (
-    <Layout>
-      <ShipmentFormModal open={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} onSave={handleSaveShipment} shipmentToEdit={editingShipment} />
-      <ConfirmationDialog open={!!shipmentToDelete} onClose={closeDeleteDialog} onConfirm={handleDelete} title="Confirmar Exclusão" message={shipmentToDelete ? `Tem certeza de que deseja excluir a remessa de ${shipmentToDelete.origin} para ${shipmentToDelete.destination}?` : ''} />
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" gutterBottom component="div">Gerenciamento de Remessas</Typography>
-          <Button variant="contained" onClick={handleOpenAddModal}>Adicionar Remessa</Button>
-        </Box>
-
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {['customerName', 'origin', 'destination', 'status'].map((headCell) => (
-                    <TableCell key={headCell} align={'left'} sortDirection={orderBy === headCell ? order : false}>
-                      <TableSortLabel active={orderBy === headCell} direction={orderBy === headCell ? order : 'asc'} onClick={() => handleRequestSort(headCell as keyof Shipment)}>
-                        {headCell === 'customerName' ? 'Cliente' : headCell === 'origin' ? 'Origem' : headCell === 'destination' ? 'Destino' : 'Status'}
-                      </TableSortLabel>
-                    </TableCell>
-                  ))}
-                  <TableCell align="center">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {shipments.map((shipment) => (
-                  <TableRow key={shipment._id} hover>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight="bold">{shipment.customerName}</Typography>
-                      <Typography variant="caption" color="text.secondary">Ref: {shipment.reference}</Typography>
-                    </TableCell>
-                    <TableCell>{shipment.origin}</TableCell>
-                    <TableCell>{shipment.destination}</TableCell>
-                    <TableCell><Chip label={shipment.status} color={statusColors[shipment.status]} size="small" /></TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenEditModal(shipment)}><EditIcon /></IconButton></Tooltip>
-                      <Tooltip title="Excluir"><IconButton size="small" onClick={() => openDeleteDialog(shipment)}><DeleteIcon /></IconButton></Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TablePagination rowsPerPageOptions={[5, 10, 25]} component="div" count={totalShipments} rowsPerPage={rowsPerPage} page={page} onPageChange={handleChangePage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Itens por página:" />
-          </TableContainer>
-        )}
-      </Paper>
-    </Layout>
-  );
-};
-
-export default ShipmentsPage;

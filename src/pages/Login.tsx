@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
       localStorage.setItem('user', JSON.stringify(user));
       console.log('Login successful!', user);
 
-      navigate('/dashboard');
+      navigate(user?.role === 'admin' ? '/admin' : '/dashboard');
 
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || 'Failed to login. Please check your credentials.';
@@ -87,7 +87,7 @@ const LoginPage: React.FC = () => {
             Sign In
           </Button>
           <Grid container justifyContent="flex-end">
-            <Grid item>
+            <Grid>
               <Link component={RouterLink} to="/register" variant="body2">
                 Don't have an account? Sign Up
               </Link>
